@@ -1,7 +1,7 @@
 import gradio as gr
-import openai_gradio
+import fireworks_gradio
 
 gr.load(
-    name='gpt-4-turbo',
-    src=openai_gradio.registry,
+    name='llama-v3p1-405b-instruct',
+    src=fireworks_gradio.registry,
 ).launch()

@@ -9,15 +9,18 @@ __version__ = "0.0.3"
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key: str):
     def fn(message, history):
         inputs = preprocess(message, history)
-        client = OpenAI(api_key=api_key)
-        completion = client.chat.completions.create(
-            model=model_name,
-            messages=inputs["messages"],
+        client = OpenAI(
+            base_url="https://api.fireworks.ai/inference/v1",
+            api_key=api_key
+        )
+        completion = client.completions.create(
+            model="accounts/fireworks/models/" + model_name,
+            prompt=inputs["prompt"],
             stream=True,
         )
         response_text = ""
         for chunk in completion:
-            delta = chunk.choices[0].delta.content or ""
+            delta = chunk.choices[0].text or ""
             response_text += delta
             yield postprocess(response_text)
 
@@ -30,12 +33,11 @@ def get_interface_args(pipeline):
         outputs = None
 
         def preprocess(message, history):
-            messages = []
+            prompt = ""
             for user_msg, assistant_msg in history:
-                messages.append({"role": "user", "content": user_msg})
-                messages.append({"role": "assistant", "content": assistant_msg})
-            messages.append({"role": "user", "content": message})
-            return {"messages": messages}
+                prompt += f"User: {user_msg}\nAssistant: {assistant_msg}\n"
+            prompt += f"User: {message}\nAssistant: "
+            return {"prompt": prompt}
 
         postprocess = lambda x: x  # No post-processing needed
     else:
@@ -52,15 +54,15 @@ def get_pipeline(model_name):
 
 def registry(name: str, token: str | None = None, **kwargs):
     """
-    Create a Gradio Interface for a model on OpenAI.
+    Create a Gradio Interface for a model on Fireworks.
 
     Parameters:
         - name (str): The name of the OpenAI model.
         - token (str, optional): The API key for OpenAI.
     """
-    api_key = token or os.environ.get("OPENAI_API_KEY")
+    api_key = token or os.environ.get("FIREWORKS_API_KEY")
     if not api_key:
-        raise ValueError("OPENAI_API_KEY environment variable is not set.")
+        raise ValueError("FIREWORKS_API_KEY environment variable is not set.")
 
     pipeline = get_pipeline(name)
     inputs, outputs, preprocess, postprocess = get_interface_args(pipeline)

@@ -1,10 +1,10 @@
 import gradio as gr
-import openai_gradio
+import fireworks_gradio
 
 gr.load(
-    name='gpt-4-turbo',
-    src=openai_gradio.registry,
-    title='OpenAI-Gradio Integration',
-    description="Chat with gpt-4-turbo model.",
+    name='llama-v3p1-405b-instruct',
+    src=fireworks_gradio.registry,
+    title='Fireworks-Gradio Integration',
+    description="Chat with llama-v3p1-405b-instruct model.",
     examples=["Explain quantum gravity to a 5-year old.", "How many R are there in the word Strawberry?"]
 ).launch()
