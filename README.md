@@ -25,7 +25,7 @@ import gradio as gr
 import fireworks_gradio
 
 gr.load(
-    name='fireworks-model',
+    name='llama-v3p1-405b-instruct',
     src=fireworks_gradio.registry,
 ).launch()
 ```
@@ -41,10 +41,10 @@ import gradio as gr
 import fireworks_gradio
 
 gr.load(
-    name='fireworks-model',
+    name='llama-v3p1-405b-instruct',
     src=fireworks_gradio.registry,
     title='Fireworks-Gradio Integration',
-    description="Chat with Fireworks model.",
+    description="Chat with llama-v3p1-405b-instruct model.",
     examples=["Explain quantum mechanics to a 5-year old.", "What is the capital of France?"]
 ).launch()
 ```
@@ -58,10 +58,10 @@ import gradio as gr
 import fireworks_gradio
 
 with gr.Blocks() as demo:
-    with gr.Tab("Fireworks Model"):
-        gr.load('fireworks-model', src=fireworks_gradio.registry)
-    with gr.Tab("Another Model"):
-        gr.load('another-model', src=fireworks_gradio.registry)
+    with gr.Tab("llama-v3p1-405b-instruct"):
+        gr.load('llama-v3p1-405b-instruct', src=fireworks_gradio.registry)
+    with gr.Tab("llama-v3p2-11b-vision-instruct"):
+        gr.load('llama-v3p2-11b-vision-instruct', src=fireworks_gradio.registry)
 
 demo.launch()
 ```
