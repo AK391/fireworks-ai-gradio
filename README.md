@@ -6,7 +6,7 @@ is a Python package that makes it very easy for developers to create machine lea
 
 ```bash
 git clone https://github.com/AK391/fireworks-ai-gradio
-cd fireworks-aigradio
+cd fireworks-ai-gradio
 pip install -e .
 ```
 
