@@ -4,10 +4,10 @@ is a Python package that makes it very easy for developers to create machine lea
 
 # Installation
 
-You can install `fireworks-gradio` directly using pip:
-
 ```bash
-pip install fireworks-gradio
+git clone https://github.com/AK391/fireworks-ai-gradio
+cd fireworks-aigradio
+pip install -e .
 ```
 
 # Basic Usage
