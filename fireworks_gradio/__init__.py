@@ -13,14 +13,24 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key
             base_url="https://api.fireworks.ai/inference/v1",
             api_key=api_key
         )
-        completion = client.completions.create(
-            model="accounts/fireworks/models/" + model_name,
-            prompt=inputs["prompt"],
+        if model_name == "f1-preview":
+            model_path = "accounts/fireworks/agents/f1-preview"
+        elif model_name == "f1-mini":
+            model_path = "accounts/fireworks/agents/f1-mini-preview"
+        else:
+            model_path = f"accounts/fireworks/models/{model_name}"
+            
+        completion = client.chat.completions.create(
+            model=model_path,
+            messages=[{"role": "user", "content": inputs["prompt"]}],
             stream=True,
+            max_tokens=1024,
+            temperature=0.7,
+            top_p=1,
         )
         response_text = ""
         for chunk in completion:
-            delta = chunk.choices[0].text or ""
+            delta = chunk.choices[0].delta.content or ""
             response_text += delta
             yield postprocess(response_text)
 
