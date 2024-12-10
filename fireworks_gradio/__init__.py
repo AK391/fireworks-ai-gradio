@@ -6,6 +6,51 @@ from fireworks.client.audio import AudioInference
 
 __version__ = "0.0.3"
 
+LANGUAGES = {
+    "en": "english", "zh": "chinese", "de": "german", "es": "spanish",
+    "ru": "russian", "ko": "korean", "fr": "french", "ja": "japanese",
+    "pt": "portuguese", "tr": "turkish", "pl": "polish", "ca": "catalan",
+    "nl": "dutch", "ar": "arabic", "sv": "swedish", "it": "italian",
+    "id": "indonesian", "hi": "hindi", "fi": "finnish", "vi": "vietnamese",
+    "he": "hebrew", "uk": "ukrainian", "el": "greek", "ms": "malay",
+    "cs": "czech", "ro": "romanian", "da": "danish", "hu": "hungarian",
+    "ta": "tamil", "no": "norwegian", "th": "thai", "ur": "urdu",
+    "hr": "croatian", "bg": "bulgarian", "lt": "lithuanian", "la": "latin",
+    "mi": "maori", "ml": "malayalam", "cy": "welsh", "sk": "slovak",
+    "te": "telugu", "fa": "persian", "lv": "latvian", "bn": "bengali",
+    "sr": "serbian", "az": "azerbaijani", "sl": "slovenian", "kn": "kannada",
+    "et": "estonian", "mk": "macedonian", "br": "breton", "eu": "basque",
+    "is": "icelandic", "hy": "armenian", "ne": "nepali", "mn": "mongolian",
+    "bs": "bosnian", "kk": "kazakh", "sq": "albanian", "sw": "swahili",
+    "gl": "galician", "mr": "marathi", "pa": "punjabi", "si": "sinhala",
+    "km": "khmer", "sn": "shona", "yo": "yoruba", "so": "somali",
+    "af": "afrikaans", "oc": "occitan", "ka": "georgian", "be": "belarusian",
+    "tg": "tajik", "sd": "sindhi", "gu": "gujarati", "am": "amharic",
+    "yi": "yiddish", "lo": "lao", "uz": "uzbek", "fo": "faroese",
+    "ht": "haitian creole", "ps": "pashto", "tk": "turkmen", "nn": "nynorsk",
+    "mt": "maltese", "sa": "sanskrit", "lb": "luxembourgish", "my": "myanmar",
+    "bo": "tibetan", "tl": "tagalog", "mg": "malagasy", "as": "assamese",
+    "tt": "tatar", "haw": "hawaiian", "ln": "lingala", "ha": "hausa",
+    "ba": "bashkir", "jw": "javanese", "su": "sundanese", "yue": "cantonese"
+}
+
+# Language code lookup by name, with additional aliases
+TO_LANGUAGE_CODE = {
+    **{language: code for code, language in LANGUAGES.items()},
+    "burmese": "my",
+    "valencian": "ca",
+    "flemish": "nl",
+    "haitian": "ht",
+    "letzeburgesch": "lb",
+    "pushto": "ps",
+    "panjabi": "pa",
+    "moldavian": "ro",
+    "moldovan": "ro",
+    "sinhalese": "si",
+    "castilian": "es",
+    "mandarin": "zh"
+}
+
 
 def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key: str):
     if "whisper" in model_name:
@@ -17,9 +62,15 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key
                     os.rename(audio_input, new_path)
                     audio_input = new_path
                 
+                base_url = (
+                    "https://audio-turbo.us-virginia-1.direct.fireworks.ai" 
+                    if model_name == "whisper-v3-turbo" 
+                    else "https://audio-prod.us-virginia-1.direct.fireworks.ai"
+                )
+                
                 client = AudioInference(
                     model=model_name,
-                    base_url="https://audio-prod.us-virginia-1.direct.fireworks.ai",
+                    base_url=base_url,
                     api_key=api_key
                 )
                 
@@ -38,7 +89,7 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key
                 return {"role": "assistant", "content": "No audio input provided."}
             else:  # String input
                 return {"role": "assistant", "content": "Please upload an audio file or use the microphone to record audio."}
-            
+
     else:
         def fn(message, history, audio_input=None):
             # Ignore audio_input for non-whisper models
@@ -73,45 +124,32 @@ def get_fn(model_name: str, preprocess: Callable, postprocess: Callable, api_key
 
 
 def get_interface_args(pipeline):
-    if pipeline == "chat":
-        inputs = None
-        outputs = None
-
-        def preprocess(message, history):
-            prompt = ""
-            # Format history in OpenAI style
-            for h in history:
-                user_msg = h["role"] == "user" and h["content"] or ""
-                assistant_msg = h["role"] == "assistant" and h["content"] or ""
-                prompt += f"User: {user_msg}\nAssistant: {assistant_msg}\n"
-            
-            # Add current message
-            prompt += f"User: {message}\nAssistant: "
-            return {"prompt": prompt}
-
-        def postprocess(response):
-            # Return in OpenAI message format
-            return {"role": "assistant", "content": response}
-
-    elif pipeline == "audio":
+    if pipeline == "audio":
         inputs = [
             gr.Audio(sources=["microphone"], type="filepath"),
-            gr.Radio(["transcribe", "translate", "align"], label="Task", value="transcribe"),
-            gr.Textbox(label="Text for Alignment", visible=False)
+            gr.Radio(["transcribe"], label="Task", value="transcribe"),
         ]
         outputs = "text"
 
         def preprocess(audio_path, task, text, history):
-            if task == "align" and not text:
-                raise ValueError("Text is required for alignment task")
             if audio_path and not audio_path.endswith('.wav'):
                 new_path = audio_path + '.wav'
                 os.rename(audio_path, new_path)
                 audio_path = new_path
-            return {"role": "user", "content": {"audio_path": audio_path, "task": task, "text": text}}
+            return {"role": "user", "content": {"audio_path": audio_path, "task": task}}
 
         def postprocess(text):
             return {"role": "assistant", "content": text}
+
+    elif pipeline == "chat":
+        inputs = gr.Textbox(label="Message")
+        outputs = "text"
+
+        def preprocess(message, history):
+            return {"prompt": message}
+
+        def postprocess(response):
+            return response
 
     else:
         raise ValueError(f"Unsupported pipeline type: {pipeline}")
@@ -160,19 +198,18 @@ def registry(name: str, token: str | None = None, **kwargs):
     description = kwargs.pop("description", None)
     if "whisper" in name:
         description = (description or "") + """
-        \n\nSupported commands:
+        \n\nSupported inputs:
+        - Upload audio files using the textbox
         - Record audio using the microphone
-        - Use "/translate" to translate to English
-        - Use "/align your text here" to align text
         """
 
         with gr.Blocks() as interface:
-            chatbot = gr.Chatbot(type="messages", placeholder="<strong>Your Personal Audio Assistant</strong><br>Ask Me Anything")
-            mic = gr.Audio(sources=["microphone"], type="filepath", label="Record Audio")
+            chatbot = gr.Chatbot(type="messages")
+            with gr.Row():
+                mic = gr.Audio(sources=["microphone"], type="filepath", label="Record Audio")
             
             def process_audio(audio_path):
                 if audio_path:
-                    # Ensure WAV format
                     if not audio_path.endswith('.wav'):
                         new_path = audio_path + '.wav'
                         os.rename(audio_path, new_path)
@@ -182,9 +219,8 @@ def registry(name: str, token: str | None = None, **kwargs):
                     message = {"files": [audio_path], "text": ""}
                     response = fn(message, [])
                     
-                    # Format messages in OpenAI style (Flat list)
                     return [
-                        {"role": "user", "content": {"path": audio_path}},
+                        {"role": "user", "content": gr.Audio(value=audio_path)},
                         {"role": "assistant", "content": response["content"]}
                     ]
                 return []
@@ -194,13 +230,13 @@ def registry(name: str, token: str | None = None, **kwargs):
                 inputs=[mic],
                 outputs=[chatbot]
             )
+
     else:
         # For non-whisper models, use regular ChatInterface
         interface = gr.ChatInterface(
             fn=fn,
             type="messages",
             description=description,
-            additional_inputs=gr.Audio(sources=["microphone"], type="filepath", label="Audio Input"),
             **kwargs
         )
 
